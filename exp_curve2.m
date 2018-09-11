@@ -4,10 +4,10 @@ stair_height = 16.5
 stair_width = 26.5
 target_ratio = stair_height/stair_width
 alpha = target_ratio;
-segm_count = 5;
+segm_count = 3;
 segm_angular_size = 2*pi/segm_count;
 
-r0 = 18;
+r0 = 11;
 
 equation_fn = @(f) (stair_height^2 + (stair_width - r0*sqrt(1+alpha^2)/alpha*(exp(f*alpha*segm_angular_size)-1))^2) - ...
 					r0^2 * (1 + exp(2*f*alpha*segm_angular_size) - 2*exp(f*alpha*segm_angular_size)*cos((1-f)*segm_angular_size));

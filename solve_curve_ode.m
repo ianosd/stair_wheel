@@ -1,19 +1,18 @@
-alpha = -0.1;
-xdot_0 = @(r, o) [o, rddot(r, o, alpha)];
+alpha = 0.1;
+xdot_0 = @(r, o) [o, 2*o^2/r + r];
 
 xdot = @(x, t) xdot_0(x(1), x(2))
 
-x0 = [1, 1];
+x0 = [1, 0.1];
 
 ang = atan2(x0(1), -x0(2)) - pi
 
 disp('xdot(x0)='), disp(xdot(x0, 1))
 
-t = ang:0.1:ang+4*pi;
+t = ang:0.01:ang+0.1*pi;
 [x, state, msg] = lsode(xdot, x0, t);
 
 disp(msg);
-
 points = [x(:, 1), x(:, 1)] .* [cos(t'), sin(t')];
 
 plot(points(:, 1), points(:, 2))
