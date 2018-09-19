@@ -56,8 +56,8 @@ def plot_wheel(g, *args):
         plt.plot([0, x[0]], [0, y[0]], *args)
         plt.plot([0, x[-1]], [0, y[-1]], *args)
 
-stair_width = 2
-stair_height = 1
+stair_width = 1
+stair_height = 0.7
 segm_count = 3
 
 
@@ -66,6 +66,10 @@ def constr(arr):
 
 def objective(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
+    r = arr[:-1]
+    segments = np.sqrt(r[0:-1]**2 + r[1:]**2 - 2*np.cos(theta_step)*r[0:-1]*r[1:])
+
+    segments2b2 = np.sqrt(r[0::2]
     return  np.sum(g.rp**2)
 
 def curve_length(arr):
