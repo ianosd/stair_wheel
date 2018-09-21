@@ -47,6 +47,7 @@ def plot_wheel(g, *args, **kwargs):
     else:
         transform = np.eye(3)
 
+    xx, yy = [], []
     thetas_one_segm = np.linspace(0, g.Dtheta, g.r.size)
     for i in range(g.segm_count):
         thetas = thetas_one_segm + i*2*np.pi/g.segm_count
@@ -58,16 +59,25 @@ def plot_wheel(g, *args, **kwargs):
     
         x = transformed[0, :]
         y = transformed[1, :]
-        plt.plot(x, y, *args)
-        plt.plot([0, x[0]], [0, y[0]], *args)
-        plt.plot([0, x[-1]], [0, y[-1]], *args)
+        # plt.plot(x, y, *args)
+        # plt.plot([0, x[0]], [0, y[0]], *args)
+        # plt.plot([0, x[-1]], [0, y[-1]], *args)
+
+        xx.append(x)
+        yy.append(y)
 
         if i == 0:
-            plt.plot([x[0] - stair_width, x[0], x[0], x[0] + stair_width], [y[0]-stair_height, y[0] - stair_height, y[0], y[0]], 'b')
+            stair_args = ([x[0] - stair_width, x[0], x[0], x[0] + stair_width], [y[0]-stair_height, y[0] - stair_height, y[0], y[0]], 'b')
+
+    x = np.concatenate(xx)
+    y = np.concatenate(yy)
+    plt.plot(*stair_args)
+    plt.plot(x, y, *args)
+    plt.plot(0, 0, 'r*')
 
 stair_width = 1
-stair_height = 0.7
-segm_count = 4
+stair_height = 0.5
+segm_count = 3
 
 
 def compute_angle(r0, r1, dtheta):
@@ -86,13 +96,13 @@ def objective(arr):
     segments = np.sqrt(r[0:-1]**2 + r[1:]**2 - 2*np.cos(theta_step)*r[0:-1]*r[1:])
     segments2b2 = np.sqrt(r[0:-2]**2 + r[2:]**2 - 2*np.cos(2*theta_step)*r[0:-2]*r[2:])
     angles = np.arccos((segments[0:-1]**2 + segments[1:]**2 - segments2b2**2)/(2*segments[0:-1]*segments[1:]))
-    return np.sum(g.rp**2)  + 1* max(np.pi-angles)
+    return 0*np.sum(g.rp**2)  + 1* max(np.pi-angles)
 
 def curve_length(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
     return stair_width - g.curve_length
 
-r0 = np.linspace(4, 9, 10)
+r0 = np.linspace(4, 9, 7)
 Dtheta0 = 1
 x0 = np.append(r0, Dtheta0)
 
@@ -129,5 +139,7 @@ def plot_stairs():
         y += stair_height
 
 plot_wheel_and_stair(g_star, 'y')
+plot_stairs()
 plt.axis('equal')
 plt.show()
+
