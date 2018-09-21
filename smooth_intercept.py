@@ -60,11 +60,14 @@ def plot_wheel(g, *args, **kwargs):
         joined = np.concatenate(([x], [y], np.ones((1, x.size))))
         transformed = transform.dot(joined)
     
-        x = joined[0, :]
-        y = joined[1, :]
+        x = transformed[0, :]
+        y = transformed[1, :]
         plt.plot(x, y, *args)
         plt.plot([0, x[0]], [0, y[0]], *args)
         plt.plot([0, x[-1]], [0, y[-1]], *args)
+
+        if i == 0:
+            plt.plot([x[0] - stair_width, x[0], x[0], x[0] + stair_width], [y[0]-stair_height, y[0] - stair_height, y[0], y[0]], 'b')
 
 stair_width = 1
 stair_height = 0.7
@@ -102,20 +105,16 @@ x_star = optimize.minimize(objective, x0, bounds=bounds_constr, constraints=(con
 g_0 = make_geometry(r0, Dtheta0, segm_count)
 g_star = make_geometry(x_star[:-1], x_star[-1], segm_count)
 
-# print(g_star)
-
-# plot_wheel(g_0, 'b')
-def plot_wheel_and_stair(g_star, *args):
+def plot_wheel_and_stair(g, *args):
     if not args:
         args = ('b',)
 
-    angle0 = math.atan2(-g_star.rp[0], g_star.r[0])
+    angle0 = - math.atan2(g.r[0], g.rp[0])
+    print("Angle0", angle0)
 
-    t = np.array([[np.cos(angle0), -np.sin(angle0, 0)], [np.sin(angle0), np.cos(angle0), 0], [0, 0, 1]])
+    t = np.array([[np.cos(angle0), -np.sin(angle0), 0], [np.sin(angle0), np.cos(angle0), 0], [0, 0, 1]])
 
-    plot_wheel(transform=t, *args)
-
-plot_wheel_and_stair(g_star, 'r')
+    plot_wheel(g, transform=t, *args)
 
 def plot_stairs():
     x = -1
@@ -127,8 +126,6 @@ def plot_stairs():
         plt.plot([x, x], [y, y+stair_height], 'b')
         y += stair_height
 
-plot_stairs()
+plot_wheel_and_stair(g_star, 'y')
 plt.axis('equal')
 plt.show()
-
-
