@@ -67,7 +67,7 @@ def plot_wheel(g, *args, **kwargs):
 
 stair_width = 1
 stair_height = 0.7
-segm_count = 3
+segm_count = 4
 
 
 def compute_angle(r0, r1, dtheta):
@@ -86,7 +86,7 @@ def objective(arr):
     segments = np.sqrt(r[0:-1]**2 + r[1:]**2 - 2*np.cos(theta_step)*r[0:-1]*r[1:])
     segments2b2 = np.sqrt(r[0:-2]**2 + r[2:]**2 - 2*np.cos(2*theta_step)*r[0:-2]*r[2:])
     angles = np.arccos((segments[0:-1]**2 + segments[1:]**2 - segments2b2**2)/(2*segments[0:-1]*segments[1:]))
-    return max(np.pi-angles)
+    return np.sum(g.rp**2)  + 1* max(np.pi-angles)
 
 def curve_length(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
