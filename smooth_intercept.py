@@ -26,16 +26,12 @@ def make_geometry(r, Dtheta, segm_count):
 
 
 def compute_constraints(g, stair_width, stair_height):
-    c0 = g.curve_length - g.rp[-1]*g.r[-1]/g.R[-1] + g.rp[0]*g.r[0]/g.R[0] - stair_width
-    c1 = g.r[-1]**2/g.R[-1] - g.r[0]**2/g.R[0] - stair_height
+    alpha_0 = compute_angle(g.r[0], g.r[1], g.theta_step)
+    alpha_1 = compute_angle(g.r[-2], g.r[-1], g.theta_step)
 
-    v0 = np.array([-g.rp[-1], g.r[-1]])
-    v1 = np.array([-g.rp[0], g.r[0]])
-
-    dot = v0.dot(v1)
-    det = v0[0]*v1[1] - v1[0]*v0[1]
-
-    Dalpha = math.atan2(det, dot)
+    Dalpha = alpha_1 - alpha_0
+    c0 = g.curve_length - np.cos(alpha_1)*g.r[-1] + np.cos(alpha_0)*g.r[0] - stair_width
+    c1 = g.r[-1]*np.sin(alpha_1) - g.r[0]*np.sin(alpha_0) - stair_height
 
     c2 = g.Dtheta + Dalpha - 2*np.pi/g.segm_count
 
@@ -73,6 +69,12 @@ stair_width = 1
 stair_height = 0.7
 segm_count = 3
 
+
+def compute_angle(r0, r1, dtheta):
+    r2 = np.sqrt(r0**2 + r1**2 - 2*np.cos(dtheta)*r0*r1)
+    sin_angle = np.sin(dtheta) * r0/r2
+    cos_angle = (r1**2 + r2**2 - r0**2)/(2*r1*r2)
+    return math.atan2(sin_angle, cos_angle)
 
 def constr(arr):
     return compute_constraints(make_geometry(arr[:-1], arr[-1], segm_count), stair_width, stair_height)
