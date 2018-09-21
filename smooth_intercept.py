@@ -5,7 +5,7 @@ import scipy.optimize as optimize
 from collections import namedtuple 
 
 
-WheelGeometry = namedtuple('WheelGeometry', ['r', 'rp', 'R', 'Dtheta', 'curve_length', 'segm_count'])
+WheelGeometry = namedtuple('WheelGeometry', ['r', 'rp', 'R', 'Dtheta', 'curve_length', 'segm_count', 'theta_step', 'chunk_lengths'])
 
 
 def make_geometry(r, Dtheta, segm_count):
@@ -19,9 +19,10 @@ def make_geometry(r, Dtheta, segm_count):
 
     R = np.sqrt(r[0:-1]**2 + rp**2)
 
-    curve_length= np.sum(np.sqrt(r[0:-1]**2 + r[1:]**2 - 2*np.cos(theta_step)*r[0:-1]*r[1:]))
+    chunk_lengths = np.sqrt(r[0:-1]**2 + r[1:]**2 - 2*np.cos(theta_step)*r[0:-1]*r[1:])
+    curve_length = np.sum(chunk_lengths)
 
-    return WheelGeometry(r, rp, R, Dtheta, curve_length, segm_count)
+    return WheelGeometry(r, rp, R, Dtheta, curve_length, segm_count, theta_step, chunk_lengths)
 
 
 def compute_constraints(g, stair_width, stair_height):
@@ -41,17 +42,26 @@ def compute_constraints(g, stair_width, stair_height):
     return np.array([c0, c1, c2])
 
 
-def plot_wheel(g, *args):
+def plot_wheel(g, *args, **kwargs):
     if not args:
         args = ('b',)
 
-    thetas_one_segm = np.linspace(0, g.Dtheta, g.r.size)
+    if 'transform' in kwargs:
+        transform = kwargs['transform']
+    else:
+        transform = np.eye(3)
 
+    thetas_one_segm = np.linspace(0, g.Dtheta, g.r.size)
     for i in range(g.segm_count):
         thetas = thetas_one_segm + i*2*np.pi/g.segm_count
         x = g.r*np.cos(thetas)
         y = g.r*np.sin(thetas)
-
+        
+        joined = np.concatenate(([x], [y], np.ones((1, x.size))))
+        transformed = transform.dot(joined)
+    
+        x = joined[0, :]
+        y = joined[1, :]
         plt.plot(x, y, *args)
         plt.plot([0, x[0]], [0, y[0]], *args)
         plt.plot([0, x[-1]], [0, y[-1]], *args)
@@ -67,16 +77,17 @@ def constr(arr):
 def objective(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
     r = arr[:-1]
+    theta_step = g.Dtheta/(r.size - 1)
     segments = np.sqrt(r[0:-1]**2 + r[1:]**2 - 2*np.cos(theta_step)*r[0:-1]*r[1:])
-
-    segments2b2 = np.sqrt(r[0::2]
-    return  np.sum(g.rp**2)
+    segments2b2 = np.sqrt(r[0:-2]**2 + r[2:]**2 - 2*np.cos(2*theta_step)*r[0:-2]*r[2:])
+    angles = np.arccos((segments[0:-1]**2 + segments[1:]**2 - segments2b2**2)/(2*segments[0:-1]*segments[1:]))
+    return max(np.pi-angles)
 
 def curve_length(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
     return stair_width - g.curve_length
 
-r0 = np.linspace(1, 1, 10)
+r0 = np.linspace(4, 9, 10)
 Dtheta0 = 1
 x0 = np.append(r0, Dtheta0)
 
@@ -94,7 +105,17 @@ g_star = make_geometry(x_star[:-1], x_star[-1], segm_count)
 # print(g_star)
 
 # plot_wheel(g_0, 'b')
-plot_wheel(g_star, 'r')
+def plot_wheel_and_stair(g_star, *args):
+    if not args:
+        args = ('b',)
+
+    angle0 = math.atan2(-g_star.rp[0], g_star.r[0])
+
+    t = np.array([[np.cos(angle0), -np.sin(angle0, 0)], [np.sin(angle0), np.cos(angle0), 0], [0, 0, 1]])
+
+    plot_wheel(transform=t, *args)
+
+plot_wheel_and_stair(g_star, 'r')
 
 def plot_stairs():
     x = -1
