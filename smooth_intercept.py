@@ -74,9 +74,9 @@ def plot_wheel(g, *args, **kwargs):
     plt.plot(x, y, *args)
     plt.plot(0, 0, 'r*')
 
-stair_width = 10 
-stair_height = 5 
-segm_count = 5 
+stair_width = 30 
+stair_height = 15 
+segm_count = 3 
 
 
 def compute_angle(r0, r1, dtheta):
@@ -129,7 +129,7 @@ def objective(arr):
     # return 0*np.sum(distances**2) + 1*max(np.pi - angles)
     # return abs(poly_area(path[0, :], path[1, :])) + 0.0*max(np.pi-angles)
     #return 1*work_obj(arr) + 0* max(np.pi - angles)*(stair_width*stair_height)
-    return squared_diff_obj(arr)
+    return squared_diff_obj(arr) + 0.9 * max(np.pi - angles)*(stair_width*stair_height)
 
 def poly_area(x,y):
     return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
@@ -174,7 +174,7 @@ def chunk_areas(arr):
 
     return r[:-2]*(s*r[1:-1] - s2*r[2:]) + r[1:-1]*r[2:]*(c*s2 - c2*s)
 
-r0 = np.linspace(stair_width, stair_width, 20)
+r0 = np.linspace(stair_width, stair_width, 10)
 Dtheta0 = 1
 x0 = np.append(r0, Dtheta0)
 
