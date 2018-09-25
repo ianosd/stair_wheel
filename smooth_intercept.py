@@ -76,7 +76,7 @@ def plot_wheel(g, *args, **kwargs):
 
 stair_width = 1
 stair_height = 0.5
-segm_count = 3
+segm_count = 4
 
 
 def compute_angle(r0, r1, dtheta):
