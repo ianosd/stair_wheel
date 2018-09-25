@@ -26,7 +26,7 @@ def make_geometry(r, Dtheta, segm_count):
 
 
 def compute_constraints(g, stair_width, stair_height):
-    alpha_0 = compute_angle(g.r[0], g.r[1], g.theta_step)
+    alpha_0 = compute_backward_angle(g.r[0], g.r[1], g.theta_step)
     alpha_1 = compute_angle(g.r[-2], g.r[-1], g.theta_step)
 
     Dalpha = alpha_1 - alpha_0
@@ -59,9 +59,6 @@ def plot_wheel(g, *args, **kwargs):
     
         x = transformed[0, :]
         y = transformed[1, :]
-        # plt.plot(x, y, *args)
-        # plt.plot([0, x[0]], [0, y[0]], *args)
-        # plt.plot([0, x[-1]], [0, y[-1]], *args)
 
         xx.append(x)
         yy.append(y)
@@ -70,7 +67,9 @@ def plot_wheel(g, *args, **kwargs):
             stair_args = ([x[0] - stair_width, x[0], x[0], x[0] + stair_width], [y[0]-stair_height, y[0] - stair_height, y[0], y[0]], 'b')
 
     x = np.concatenate(xx)
+    x = np.append(x, x[0])
     y = np.concatenate(yy)
+    y = np.append(y, y[0])
     plt.plot(*stair_args)
     plt.plot(x, y, *args)
     plt.plot(0, 0, 'r*')
@@ -84,10 +83,18 @@ def compute_angle(r0, r1, dtheta):
     r2 = np.sqrt(r0**2 + r1**2 - 2*np.cos(dtheta)*r0*r1)
     sin_angle = np.sin(dtheta) * r0/r2
     cos_angle = (r1**2 + r2**2 - r0**2)/(2*r1*r2)
-    return math.atan2(sin_angle, cos_angle)
+    return np.arctan2(sin_angle, cos_angle)
+
+def compute_backward_angle(r0, r1, dtheta):
+    return dtheta + compute_angle(r0, r1, dtheta)
 
 def constr(arr):
     return compute_constraints(make_geometry(arr[:-1], arr[-1], segm_count), stair_width, stair_height)
+
+def centre_points(g):
+    bwd_angles = compute_backward_angle(g.r[:-1], g.r[1:], g.theta_step)
+    l = np.insert(np.cumsum(g.chunk_lengths), 0, 0)
+    return np.array([g.r[:-1]*np.cos(bwd_angles) + l[:-1], g.r[:-1]*np.sin(bwd_angles)])
 
 def objective(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
@@ -96,7 +103,8 @@ def objective(arr):
     segments = np.sqrt(r[0:-1]**2 + r[1:]**2 - 2*np.cos(theta_step)*r[0:-1]*r[1:])
     segments2b2 = np.sqrt(r[0:-2]**2 + r[2:]**2 - 2*np.cos(2*theta_step)*r[0:-2]*r[2:])
     angles = np.arccos((segments[0:-1]**2 + segments[1:]**2 - segments2b2**2)/(2*segments[0:-1]*segments[1:]))
-    return 0*np.sum(g.rp**2)  + 1* max(np.pi-angles)
+    # return -sum(g.r**2)
+    return max(np.pi - angles)
 
 def curve_length(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
@@ -109,7 +117,7 @@ x0 = np.append(r0, Dtheta0)
 cons = {'type': 'eq', 'fun': constr}
 cons_length = {'type': 'ineq', 'fun': curve_length}
 
-bounds_constr = optimize.Bounds(0, np.append(np.repeat(100, r0.size), 2*np.pi/segm_count))
+bounds_constr = optimize.Bounds(0.1, np.append(np.repeat(100, r0.size), 2*np.pi/segm_count))
 x_star = optimize.minimize(objective, x0, bounds=bounds_constr, constraints=(cons, cons_length)).x
 
 # print(constr(x_star))
@@ -121,12 +129,14 @@ def plot_wheel_and_stair(g, *args):
     if not args:
         args = ('b',)
 
-    angle0 = - math.atan2(g.r[0], g.rp[0])
+    angle0 = - compute_backward_angle(g.r[0], g.r[1], g.theta_step)
     print("Angle0", angle0)
 
     t = np.array([[np.cos(angle0), -np.sin(angle0), 0], [np.sin(angle0), np.cos(angle0), 0], [0, 0, 1]])
 
     plot_wheel(g, transform=t, *args)
+    path = centre_points(g)
+    plt.plot(path[0, :], path[1, :])
 
 def plot_stairs():
     x = -1
