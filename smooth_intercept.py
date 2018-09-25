@@ -128,7 +128,7 @@ def objective(arr):
     # return -sum(g.r**2)
     # return 0*np.sum(distances**2) + 1*max(np.pi - angles)
     # return abs(poly_area(path[0, :], path[1, :])) + 0.0*max(np.pi-angles)
-    return 1*work_obj(arr) + 0.1* max(np.pi - angles)
+    return 1*work_obj(arr) + 0.1* max(np.pi - angles)*(stair_width*stair_height)
 
 def poly_area(x,y):
     return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
@@ -206,7 +206,6 @@ def plot_stairs():
         y += stair_height
 
 plot_wheel_and_stair(g_star, 'y')
-plot_stairs()
 plt.axis('equal')
 plt.show()
 
