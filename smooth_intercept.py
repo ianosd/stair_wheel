@@ -74,9 +74,9 @@ def plot_wheel(g, *args, **kwargs):
     plt.plot(x, y, *args)
     plt.plot(0, 0, 'r*')
 
-stair_width = 1 
-stair_height = 0.5 
-segm_count = 4 
+stair_width = 10 
+stair_height = 5 
+segm_count = 5 
 
 
 def compute_angle(r0, r1, dtheta):
@@ -129,7 +129,7 @@ def objective(arr):
     # return 0*np.sum(distances**2) + 1*max(np.pi - angles)
     # return abs(poly_area(path[0, :], path[1, :])) + 0.0*max(np.pi-angles)
     #return 1*work_obj(arr) + 0* max(np.pi - angles)*(stair_width*stair_height)
-    return 0.1*slope_obj(arr)
+    return squared_diff_obj(arr)
 
 def poly_area(x,y):
     return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
@@ -141,17 +141,15 @@ def work_obj(arr):
     y_diffs = path[1, 1:] - path[1, :-1]
     return sum(abs(y_diffs)) 
 
-def slope_obj(arr):
+def squared_diff_obj(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
     path = centre_points(g)
 
-    y_diffs = path[1, 1:] - path[1, :-1]
     x_diffs = path[0, 1:] - path[0, :-1]
 
+    ys_ideal = stair_height/stair_width * path[0, :]
 
-    crosses = (y_diffs*stair_width - x_diffs*stair_height)
-
-    return max(abs(crosses)) 
+    return np.sum((ys_ideal[:-1] - path[1, :-1])**2*x_diffs)
 
 def area_obj(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
@@ -176,7 +174,7 @@ def chunk_areas(arr):
 
     return r[:-2]*(s*r[1:-1] - s2*r[2:]) + r[1:-1]*r[2:]*(c*s2 - c2*s)
 
-r0 = np.linspace(0, 0, 5)
+r0 = np.linspace(stair_width, stair_width, 20)
 Dtheta0 = 1
 x0 = np.append(r0, Dtheta0)
 
