@@ -91,10 +91,30 @@ def compute_backward_angle(r0, r1, dtheta):
 def constr(arr):
     return compute_constraints(make_geometry(arr[:-1], arr[-1], segm_count), stair_width, stair_height)
 
+def lerp(a, b, s):
+    return s*b + (1-s)*a
+
 def centre_points(g):
     bwd_angles = compute_backward_angle(g.r[:-1], g.r[1:], g.theta_step)
-    l = np.insert(np.cumsum(g.chunk_lengths), 0, 0)
-    return np.array([g.r[:-1]*np.cos(bwd_angles) + l[:-1], g.r[:-1]*np.sin(bwd_angles)])
+    fwd_angles = compute_angle(g.r[:-1], g.r[1:], g.theta_step)
+
+    steps = 10
+    result = np.empty((2, 0), dtype=g.r.dtype)
+    l = np.cumsum(g.chunk_lengths)
+    for i in range(g.r.size-2):
+        fwd_angle = fwd_angles[i]
+        bwd_angle = bwd_angles[i+1]
+        pos_angles = np.pi - lerp(fwd_angle, bwd_angle, np.linspace(0, 1, steps))
+        pos = np.array([g.r[i+1]*np.cos(pos_angles) + l[i], g.r[i+1]*np.sin(pos_angles)])
+        result = np.concatenate((result, pos), 1)
+
+    return result - np.repeat(np.array([result[:, 0]]).T, result.shape[1], 1)
+
+def dist_to_line_sqr(p, x0, y0, x1, y1):
+    normer = np.array([y0-y1, x1-x0, x0*y1-x1*y0])
+    p_extended = np.concatenate((p, np.ones((1, p.shape[1]))), 0)
+    distances = normer.dot(p_extended)
+    return np.abs(distances)
 
 def objective(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
@@ -103,22 +123,58 @@ def objective(arr):
     segments = np.sqrt(r[0:-1]**2 + r[1:]**2 - 2*np.cos(theta_step)*r[0:-1]*r[1:])
     segments2b2 = np.sqrt(r[0:-2]**2 + r[2:]**2 - 2*np.cos(2*theta_step)*r[0:-2]*r[2:])
     angles = np.arccos((segments[0:-1]**2 + segments[1:]**2 - segments2b2**2)/(2*segments[0:-1]*segments[1:]))
+    path = centre_points(g)
+    distances = dist_to_line_sqr(path, 0, 0, stair_width, stair_height)
     # return -sum(g.r**2)
-    return max(np.pi - angles)
+    # return 0*np.sum(distances**2) + 1*max(np.pi - angles)
+    # return abs(poly_area(path[0, :], path[1, :])) + 0.0*max(np.pi-angles)
+    return 1*work_obj(arr) + 0.1* max(np.pi - angles)
+
+def poly_area(x,y):
+    return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
+
+def work_obj(arr):
+    g = make_geometry(arr[:-1], arr[-1], segm_count)
+    path = centre_points(g)
+
+    y_diffs = path[1, 1:] - path[1, :-1]
+    return sum(abs(y_diffs)) 
+
+def area_obj(arr):
+    g = make_geometry(arr[:-1], arr[-1], segm_count)
+    path = centre_points(g)
+    distances = dist_to_line_sqr(path, 0, 0, stair_width, stair_height)
+    # return -sum(g.r**2)
+    return abs(poly_area(path[0, :], path[1, :]))
+    
 
 def curve_length(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
-    return stair_width - g.curve_length
+    return stair_width*0.6 - g.curve_length
 
-r0 = np.linspace(4, 9, 7)
+def chunk_areas(arr):
+    g = make_geometry(arr[:-1], arr[-1], segm_count)
+    c = np.cos(g.theta_step)
+    s = np.sin(g.theta_step)
+    c2 = np.cos(2*g.theta_step)
+    s2 = np.sin(2*g.theta_step)
+
+    r = g.r
+
+    return r[:-2]*(s*r[1:-1] - s2*r[2:]) + r[1:-1]*r[2:]*(c*s2 - c2*s)
+
+r0 = np.linspace(1, 1.5, 10)
 Dtheta0 = 1
 x0 = np.append(r0, Dtheta0)
 
 cons = {'type': 'eq', 'fun': constr}
 cons_length = {'type': 'ineq', 'fun': curve_length}
+cons_convex = {'type': 'ineq', 'fun': chunk_areas}
 
 bounds_constr = optimize.Bounds(0.1, np.append(np.repeat(100, r0.size), 2*np.pi/segm_count))
-x_star = optimize.minimize(objective, x0, bounds=bounds_constr, constraints=(cons, cons_length)).x
+opt_res = optimize.minimize(objective, x0, bounds=bounds_constr, constraints=(cons, cons_length, cons_convex))
+x_star = opt_res.x
+print("opt_val:", work_obj(x_star))
 
 # print(constr(x_star))
 
@@ -136,7 +192,8 @@ def plot_wheel_and_stair(g, *args):
 
     plot_wheel(g, transform=t, *args)
     path = centre_points(g)
-    plt.plot(path[0, :], path[1, :])
+    plt.plot(path[0, :], path[1, :], '*-')
+    plt.plot([0, stair_width], [0, stair_height])
 
 def plot_stairs():
     x = -1
