@@ -149,7 +149,19 @@ def squared_diff_obj(arr):
 
     ys_ideal = stair_height/stair_width * path[0, :]
 
-    return np.sum((ys_ideal[:-1] - path[1, :-1])**2*x_diffs)
+    return np.sum((path[1, :-1])**2*x_diffs)
+
+def max_slope_obj(arr):
+    g = make_geometry(arr[:-1], arr[-1], segm_count)
+
+    path = centre_points(g)
+
+    path_segments = path[:, 1:] - path[:, :-1]
+
+    dy = path_segments[1, :]
+    dx = path_segments[0, :]
+
+    return np.max(np.abs(dy/(np.abs(dx) + 0.00001*np.sqrt(np.sum(dx**2/dx.size)))))
 
 def area_obj(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
@@ -174,7 +186,8 @@ def chunk_areas(arr):
 
     return r[:-2]*(s*r[1:-1] - s2*r[2:]) + r[1:-1]*r[2:]*(c*s2 - c2*s)
 
-r0 = np.linspace(stair_width, stair_width, 10)
+#r0 = np.random.rand(10) * stair_width/4 + stair_width*3/4
+r0 = stair_width*np.exp(stair_height/stair_width * np.linspace(0, 1, 10))
 Dtheta0 = 1
 x0 = np.append(r0, Dtheta0)
 
@@ -183,7 +196,9 @@ cons_length = {'type': 'ineq', 'fun': curve_length}
 cons_convex = {'type': 'ineq', 'fun': chunk_areas}
 
 bounds_constr = optimize.Bounds(0.1, np.append(np.repeat(100, r0.size), 2*np.pi/segm_count))
-opt_res = optimize.minimize(objective, x0, bounds=bounds_constr, constraints=(cons, cons_length, cons_convex))
+
+obj = squared_diff_obj
+opt_res = optimize.minimize(obj, x0, bounds=bounds_constr, constraints=(cons, cons_length, cons_convex))
 x_star = opt_res.x
 print("opt_res:", opt_res)
 
@@ -216,7 +231,10 @@ def plot_stairs():
         plt.plot([x, x], [y, y+stair_height], 'b')
         y += stair_height
 
+plt.subplot(2, 1, 1)
 plot_wheel_and_stair(g_star, 'y')
 plt.axis('equal')
-plt.show()
 
+plt.subplot(2, 1, 2)
+plot_wheel_and_stair(g_0, 'r')
+plt.show()
