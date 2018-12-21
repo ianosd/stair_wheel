@@ -151,6 +151,14 @@ def squared_diff_obj(arr):
 
     return np.sum((path[1, :-1])**2*x_diffs)
 
+def length_obj(arr):
+    g = make_geometry(arr[:-1], arr[-1], segm_count)
+    path = centre_points(g)
+
+    path_segments = path[:, 1:] - path[:, :-1]
+
+    return np.sum(path_segments[1, :]**2 + path_segments[0, :]**2)
+
 def max_slope_obj(arr):
     g = make_geometry(arr[:-1], arr[-1], segm_count)
 
@@ -197,7 +205,7 @@ cons_convex = {'type': 'ineq', 'fun': chunk_areas}
 
 bounds_constr = optimize.Bounds(0.1, np.append(np.repeat(100, r0.size), 2*np.pi/segm_count))
 
-obj = squared_diff_obj
+obj = length_obj
 opt_res = optimize.minimize(obj, x0, bounds=bounds_constr, constraints=(cons, cons_length, cons_convex))
 x_star = opt_res.x
 print("opt_res:", opt_res)
